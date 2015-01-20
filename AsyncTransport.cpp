@@ -19,7 +19,8 @@ using std::cerr;
 using std::endl;
 
 AsyncTransport::AsyncTransport( PacketParser * pp ) {
-	bufferQueue  = NULL;
+	epollSendFD  = epoll_create( 1 );
+	bufferQueue  = new BufferQueue(epollSendFD);
 	packetQueue  = new PacketQueue();
 	packetParser = pp;
 }
@@ -47,6 +48,10 @@ AsyncTransport::sendPacket( Packet * pkt ) {
 		return;
 	}
 
+	if (!isServer) {
+		pkt->fd = fd;
+	}
+
 	//Try to send packet right away, if it blocks, do epoll stuff
     int ret = 0;
     while(1) {
@@ -70,26 +75,25 @@ bool
 AsyncTransport::init( string addr, int port ) {
 	isServer = false;
 
-	int	sd;
 	struct sockaddr_in server;
 	struct hostent *hp;
 
-	sd = socket (AF_INET, SOCK_STREAM, 0);
-
+	fd = socket (AF_INET, SOCK_STREAM, 0);
+	
 	server.sin_family = AF_INET;
 	hp = gethostbyname(addr.c_str());
 	bcopy ( hp->h_addr, &(server.sin_addr.s_addr), hp->h_length);
 	server.sin_port = htons(port);
 
 	int one = 1;
-	setsockopt( sd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(int) );
-	setsockopt( sd, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(int) );
-	setsockopt( sd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int) );
+	setsockopt( fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(int) );
+	setsockopt( fd, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(int) );
+	setsockopt( fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int) );
 
-	int flags = fcntl( sd, F_GETFL, 0 );
-	fcntl( listenFD, F_SETFL, flags | O_NONBLOCK );
+	int flags = fcntl( fd, F_GETFL, 0 );
+	fcntl( fd, F_SETFL, flags | O_NONBLOCK );
 	
-	int ret = connect(sd, (const sockaddr *) &server, sizeof(server));
+	int ret = connect(fd, (const sockaddr *) &server, sizeof(server));
 
 	return ret == 0 ? true : false;
 }
@@ -100,18 +104,18 @@ AsyncTransport::init( int port ) {
 	struct sockaddr_in server;
      
     //Create socket
-    listenFD = socket(AF_INET , SOCK_STREAM , 0);
-    if ( listenFD == -1 )
+    fd = socket(AF_INET , SOCK_STREAM , 0);
+    if ( fd == -1 )
     {
         return false;
     }
 	int one = 1;
-	setsockopt( listenFD, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(int) );
-	setsockopt( listenFD, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(int) );
-	setsockopt( listenFD, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int) );
+	setsockopt( fd, IPPROTO_TCP, TCP_NODELAY, &one, sizeof(int) );
+	setsockopt( fd, SOL_SOCKET, SO_KEEPALIVE, &one, sizeof(int) );
+	setsockopt( fd, SOL_SOCKET, SO_REUSEADDR, &one, sizeof(int) );
 
-	int flags = fcntl( listenFD, F_GETFL, 0 );
-	fcntl( listenFD, F_SETFL, flags | O_NONBLOCK );
+	int flags = fcntl( fd, F_GETFL, 0 );
+	fcntl( fd, F_SETFL, flags | O_NONBLOCK );
 
 	//Fill sockaddr_in structure
     server.sin_family = AF_INET;
@@ -119,13 +123,13 @@ AsyncTransport::init( int port ) {
     server.sin_port = htons( port );
      
     //Bind
-    if( bind( listenFD, (sockaddr *)&server , sizeof(server) ) < 0 )
+    if( bind( fd, (sockaddr *)&server , sizeof(server) ) < 0 )
     {
         return false;
     }
      
     //Listen
-    listen( listenFD, 1000 );
+    listen( fd, 1000 );
 	return true;
 }
 
@@ -155,7 +159,7 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 	bool isServer = serverTransport->isServer;
 	int serverFD = 0;
 	if ( isServer ) {
-		serverFD = serverTransport->listenFD;
+		serverFD = serverTransport->fd;
 		ev.events = EPOLLIN;
 		ev.data.fd = serverFD;
 		if( epoll_ctl(epollFD, EPOLL_CTL_ADD, serverFD, &ev ) == -1 ) {
@@ -199,7 +203,7 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 					recvCount = recv( cd->fd,
 							cd->buffer + cd->bufferSize,
 							MAX_PACKET_SIZE - cd->bufferSize, MSG_NOSIGNAL );
-					
+				
 					if      ( (recvCount == -1 && (errno == EAGAIN || errno == EWOULDBLOCK )) ) {
 						break;
 					}
@@ -257,17 +261,12 @@ AsyncTransport::sendData( AsyncTransport * serverTransport ) {
 	epoll_event events[MAX_EVENTS];
 	int nfds;
 
-	serverTransport->epollSendFD = epoll_create( 1 );
-
 	int epollSendFD = serverTransport->epollSendFD;
+	BufferQueue *bufferQueue = serverTransport->bufferQueue;
 	
 	if( epollSendFD == -1 ) {
 		exit(-10);
 	}
-
-	BufferQueue *bufferQueue = new BufferQueue( epollSendFD );
-	serverTransport->bufferQueue = bufferQueue;
-	
 	while( 1 ) {
 		nfds = epoll_wait( epollSendFD, events, MAX_EVENTS, -1 );
 		if( nfds == -1 ) {

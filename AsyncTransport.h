@@ -35,9 +35,12 @@ class AsyncTransport {
 		PacketQueue  *packetQueue;
 		static void receiveData( AsyncTransport * );
 		static void sendData( AsyncTransport * );
-		int listenFD;
 		int epollSendFD;
 		mutex closeMutex;
+
+		//fd is the server endpoint on client,
+		//and the listen fd on server.
+		int fd;
 		bool isServer;
 };
 #endif

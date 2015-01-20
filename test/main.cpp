@@ -11,7 +11,7 @@ class PacketImpl : public Packet {
 
 class PacketParserImpl : public PacketParser {
 	Packet* deserialize ( unsigned char *buffer, unsigned int bufferSize, unsigned int *bufferUsed ) {
-		if( bufferSize > 2 ) {
+		if( bufferSize >= 2 ) {
 			PacketImpl* packet = new PacketImpl();
 			packet->data1 = buffer[0];
 			packet->data2 = buffer[1];
@@ -40,10 +40,27 @@ main( int argv, char **argc ) {
 	asyncTransport.init( 7290 );
 	asyncTransport.start();
 
-	while(1) {
-		Packet *packet = asyncTransport.getPacket();
-		cout << "Got a packet!" << endl;
+	AsyncTransport clientTransport( packetParser );
+	clientTransport.init( "localhost", 7290 );
+	clientTransport.start();
+
+	PacketImpl *packet = new PacketImpl();
+	packet->data1 = 'h';
+	packet->data2 = 'i';
+
+	clientTransport.sendPacket((Packet*) packet);
+
+	packet = (PacketImpl*) asyncTransport.getPacket();
+
+	clientTransport.closeFd(packet->fd);
+
+	if (packet->data1 == 'h' && packet->data2 == 'i') {
+		cout << "PASS" << endl;
+	} else {
+		cout << "FAIL" << endl;
 	}
 
+	delete packet;
+	
 	return 0;
 }
