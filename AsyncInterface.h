@@ -1,8 +1,9 @@
+#ifndef __ASYNCINTERFACE_H__
+#define __ASYNCINTERFACE_H__
+
 #include <string>
 #include <map>
 
-#ifndef __ASYNCINTERFACE_H__
-#define __ASYNCINTERFACE_H__
 
 //Inherit from Packet for your packets.
 class Packet {

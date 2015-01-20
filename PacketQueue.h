@@ -1,10 +1,10 @@
+#ifndef __PACKETQUEUE_H__
+#define __PACKETQUEUE_H__
+
 #include "AsyncInterface.h"
 #include "Trigger.h"
 #include <mutex>
 #include <queue>
-
-#ifndef __PACKETQUEUE_H__
-#define __PACKETQUEUE_H__
 
 using std::queue;
 

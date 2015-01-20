@@ -1,14 +1,19 @@
-#include "AsyncInterface.h"
-#include "BufferQueue.h"
-#include "PacketQueue.h"
-
 #ifndef __ASYNCSOCKET_H__
 #define __ASYNCSOCKET_H__
+
+#include "AsyncInterface.h"
+#include <mutex>
+#include <string>
+
+class BufferQueue;
+class PacketQueue;
+
 
 //TODO This needed?
 #define MAX_PACKET_SIZE 1024
 
 using std::string;
+using std::mutex;
 
 struct ConnectionData {
     unsigned int  fd;

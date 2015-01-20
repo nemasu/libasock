@@ -1,11 +1,11 @@
+#ifndef __BUFFERQUEUE_H__
+#define __BUFFERQUEUE_H__
+
 #include "AsyncInterface.h"
 #include <iostream>
 #include <mutex>
 #include <map>
 #include <queue>
-
-#ifndef __BUFFERQUEUE_H__
-#define __BUFFERQUEUE_H__
 
 using std::map;
 using std::mutex;

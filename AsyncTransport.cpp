@@ -1,5 +1,7 @@
 #include "AsyncInterface.h"
 #include "AsyncTransport.h"
+#include "BufferQueue.h"
+#include "PacketQueue.h"
 #include <errno.h>
 #include <string.h>
 #include <thread>
