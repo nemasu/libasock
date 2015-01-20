@@ -248,6 +248,10 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 						memmove( cd->buffer, cd->buffer + bufferUsed, MAX_PACKET_SIZE - cd->bufferSize );
 
 						cd->bufferSize -= bufferUsed;
+
+						if( cd->bufferSize == 0 ) {
+							break;
+						}
 					}
 				}
 			}

@@ -1,8 +1,11 @@
 
-all: test
+all: test_simple_send_recv test_recv_spitter
 
-test: main.cpp
-	g++ -g -std=c++11 -L../ -I../ main.cpp ../libasock.so -o main
+test_simple_send_recv: simple_send_recv.cpp
+	g++ -g -std=c++11 -L../ -I../ simple_send_recv.cpp ../libasock.so -o test_simple_send_recv
+
+test_recv_spitter: recv_spitter.cpp
+	g++ -g -std=c++11 -L../ -I../ recv_spitter.cpp ../libasock.so -o test_recv_spitter
 
 clean:
-	rm -rf *.o main
+	rm -rf *.o test_*

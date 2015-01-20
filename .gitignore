@@ -1,3 +1,4 @@
 *.o
 main
 libasock*
+test/test_*
