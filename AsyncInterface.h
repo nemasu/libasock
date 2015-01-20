@@ -13,9 +13,6 @@ class Packet {
 //Implement this interface.
 class PacketParser {
 	public:
-		//Provides the minimum size of any packet.
-		virtual unsigned int getMinimumPacketSize() = 0;
-
 		//Tries to deserialize buffer, returns NULL if unsuccessful, -1 if fatal error.
 		//Buffer amount used stored in bufferUsed.
 		//Packets are deleted in AsyncTransport::sendPacket

@@ -21,7 +21,6 @@ BufferQueue::get( int fd, char *&out_buffer, int *out_length) {
 	lock_guard<mutex> lock( qMutex );
 
 	if( byteQueue.count( fd ) > 0 ) {
-		
 		char *buffer = byteQueue[fd];
 		int length = qLength[fd];
 		

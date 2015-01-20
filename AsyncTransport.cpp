@@ -20,7 +20,7 @@ using std::endl;
 
 AsyncTransport::AsyncTransport( PacketParser * pp ) {
 	bufferQueue  = NULL;
-	packetQueue  = NULL;
+	packetQueue  = new PacketQueue();
 	packetParser = pp;
 }
 
@@ -140,12 +140,8 @@ AsyncTransport::start() {
 void
 AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 	PacketParser *packetParser = serverTransport->packetParser;
+	PacketQueue  *packetQueue  = serverTransport->packetQueue;
 
-	serverTransport->packetQueue = new PacketQueue();
-	PacketQueue *packetQueue = serverTransport->packetQueue;
-
-	unsigned int minPacketSize = packetParser->getMinimumPacketSize();
-	
 	static const unsigned int MAX_EVENTS = 1000;
 	epoll_event ev, events[MAX_EVENTS];
 	int nfds, epollFD, connFD, recvCount;
@@ -204,8 +200,7 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 							cd->buffer + cd->bufferSize,
 							MAX_PACKET_SIZE - cd->bufferSize, MSG_NOSIGNAL );
 					
-					if      ( (recvCount == -1 && (errno == EAGAIN || errno == EWOULDBLOCK ))
-							|| cd->bufferSize + recvCount < minPacketSize ) {
+					if      ( (recvCount == -1 && (errno == EAGAIN || errno == EWOULDBLOCK )) ) {
 						break;
 					}
 					else if ( recvCount == 0 
@@ -270,8 +265,8 @@ AsyncTransport::sendData( AsyncTransport * serverTransport ) {
 		exit(-10);
 	}
 
-	serverTransport->bufferQueue = new BufferQueue( epollSendFD );
-	BufferQueue *bufferQueue = serverTransport->bufferQueue;
+	BufferQueue *bufferQueue = new BufferQueue( epollSendFD );
+	serverTransport->bufferQueue = bufferQueue;
 	
 	while( 1 ) {
 		nfds = epoll_wait( epollSendFD, events, MAX_EVENTS, -1 );

@@ -9,11 +9,10 @@ using std::mutex;
 
 class Trigger {
 	public:
-		Trigger(){
+		Trigger() {
 			sig = 0;
 		}
-		~Trigger(){}
-
+		
 		void notify();
 		void wait();
 

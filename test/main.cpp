@@ -10,10 +10,6 @@ class PacketImpl : public Packet {
 };
 
 class PacketParserImpl : public PacketParser {
-	unsigned int getMinimumPacketSize() {
-		return 1;
-	}
-
 	Packet* deserialize ( unsigned char *buffer, unsigned int bufferSize, unsigned int *bufferUsed ) {
 		if( bufferSize > 2 ) {
 			PacketImpl* packet = new PacketImpl();
