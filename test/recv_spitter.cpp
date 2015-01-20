@@ -47,6 +47,8 @@ main( int argv, char **argc ) {
 		}
 
 		cout << endl;
+
+		delete packet;
 	}
 
 	return 0;
