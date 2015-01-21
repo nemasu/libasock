@@ -23,3 +23,10 @@ PacketQueue.o: PacketQueue.h PacketQueue.cpp
 
 clean:
 	rm -rf *.o libasock*
+
+install: all
+	mkdir -p /usr/include/libasock
+	cp -v AsyncInterface.h /usr/include/libasock
+	cp -v AsyncTransport.h /usr/include/libasock
+	cp -v libasock.so /usr/lib
+
