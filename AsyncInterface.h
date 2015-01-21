@@ -9,6 +9,11 @@
 class Packet {
 	public:	
 		int fd;
+
+		void
+		setOrigin(Packet *pkt) {
+			fd = pkt->fd;
+		}
 };
 
 //Implement this interface.
