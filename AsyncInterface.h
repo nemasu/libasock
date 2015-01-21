@@ -22,7 +22,7 @@ class PacketParser {
 		//Returns serialization of pkt, size is written into out_size.
 		virtual char*        serialize   ( Packet         *pkt,    unsigned int *out_size  ) = 0;
 
-		virtual ~PacketParser();
+		virtual ~PacketParser(){};
 };
 
 #endif
