@@ -9,8 +9,9 @@ class BufferQueue;
 class PacketQueue;
 
 
-//TODO This needed?
-#define MAX_PACKET_SIZE 1024
+//TODO This is huge. 65KB+ per connection too much overhead?
+//Or, smaller buffer, then copy into resizing ConnectionData buffer...
+#define MAX_PACKET_SIZE 65535
 
 using std::string;
 using std::mutex;
