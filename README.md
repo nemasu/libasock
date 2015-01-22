@@ -1,5 +1,5 @@
 # libasock
-Asynchronous TCP socket library for Linux. 
+Asynchronous C++ TCP socket library for Linux. 
 
 This library is not ready for general use yet, I pulled it out of another project of mine, so it's set up a bit weird at the moment.
 
