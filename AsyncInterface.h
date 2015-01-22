@@ -4,17 +4,27 @@
 #include <string>
 #include <map>
 
+enum PacketType {
+	NORMAL,
+	DISCONNECT
+};
 
 //Inherit from Packet for your packets.
 class Packet {
 	public:	
-		int fd;
 
+		Packet(PacketType t = NORMAL) {
+			type = t;
+		}
+
+		int fd;
+		PacketType type;
+		
 		void
 		setOrigin(Packet *pkt) {
 			fd = pkt->fd;
 		}
-};
+	};
 
 //Implement this interface.
 class PacketParser {

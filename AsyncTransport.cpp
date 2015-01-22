@@ -42,6 +42,12 @@ AsyncTransport::getPacket() {
 
 void
 AsyncTransport::sendPacket( Packet * pkt ) {
+	
+	if (pkt->type == DISCONNECT) {
+		closeFd( pkt->fd );
+		return;
+	}
+	
 	unsigned int length = 0;
 	char *buffer = packetParser->serialize( pkt, &length );
 	
