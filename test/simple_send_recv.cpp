@@ -50,16 +50,31 @@ main( int argv, char **argc ) {
 
 	clientTransport.sendPacket((Packet*) packet);
 
+	
 	packet = (PacketImpl*) asyncTransport.getPacket();
 
-	clientTransport.closeFd(packet->fd);
+	//First packet connet packet
+	if (packet->type != PacketType::CONNECT) {
+		cout << "FAIL" << endl;
+		cout << "Failed to recieve CONNECT packet" << endl;
+		return -1;
+	}
 
+	//Second packet data
+	packet = (PacketImpl*) asyncTransport.getPacket();
+	
 	if (packet->data1 == 'h' && packet->data2 == 'i') {
 		cout << "PASS" << endl;
 	} else {
 		cout << "FAIL" << endl;
+		cout << "contents are:" << endl;
+		cout << "data1: " << packet->data1 << endl;
+		cout << "data2: " << packet->data2 << endl;
+		return -1;
 	}
 
+	clientTransport.closeFd(packet->fd);
+	
 	delete packet;
 	
 	return 0;

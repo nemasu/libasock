@@ -6,6 +6,7 @@
 
 enum PacketType {
 	NORMAL,
+	CONNECT,
 	DISCONNECT
 };
 

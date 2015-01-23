@@ -11,7 +11,7 @@ class PacketImpl : public Packet {
 };
 
 class PacketParserImpl : public PacketParser {
-	Packet* deserialize ( unsigned char *buffer, unsigned int bufferSize, unsigned int *bufferUsed ) {
+	Packet* deserialize ( unsigned char *buffer, unsigned int bufferSize, unsigned int *bufferUsed ) {		
 		cout << "Got buffer of size: " << bufferSize << endl;
 		
 		PacketImpl* packet = new PacketImpl();
@@ -42,11 +42,13 @@ main( int argv, char **argc ) {
 	while(1) {
 		PacketImpl *packet = (PacketImpl*) asyncTransport.getPacket();
 
-		for (int i = 0; i < packet->size; i++) {
-			cout << packet->data[i];
-		}
+		if (packet->type == PacketType::NORMAL) {
+			for (int i = 0; i < packet->size; i++) {
+				cout << packet->data[i];
+			}
 
-		cout << endl;
+			cout << endl;
+		}
 
 		delete packet;
 	}

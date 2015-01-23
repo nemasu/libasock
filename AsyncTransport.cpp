@@ -204,6 +204,11 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 				if( epoll_ctl( epollFD, EPOLL_CTL_ADD, connFD, &ev ) == -1 ) {
 					exit(-4);
 				}
+
+				Packet *packet = new Packet();
+				packet->type = PacketType::CONNECT;
+				packet->fd = connFD;
+				packetQueue->push( packet );
 			} else {
 				ConnectionData *cd = (ConnectionData *) events[n].data.ptr;
 				
