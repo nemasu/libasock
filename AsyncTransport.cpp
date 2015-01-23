@@ -235,7 +235,7 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 						unsigned int bufferUsed = 0;
 						Packet *newPacket = packetParser->deserialize( cd->buffer, cd->bufferSize, &bufferUsed );
 
-						if( newPacket == NULL ) {
+						if( newPacket == NULL && bufferUsed == 0 ) {
 							//Deserialize failed, wait for more data.
 							break;
 						} else if ( (long) newPacket == -1 ) {
@@ -249,14 +249,18 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 							|| bufferUsed + MAX_PACKET_SIZE - cd->bufferSize > MAX_PACKET_SIZE ) {
 							
 							cerr << "TCPTransport memmove dest error" << endl;
-							delete newPacket;
+							if ( newPacket != NULL ) {
+								delete newPacket;
+							}
 							cd->bufferSize = 0;
 							break;
 						}
 			
 						//Assign socket file descriptor
-						newPacket->fd = cd->fd;
-						packetQueue->push( newPacket );
+						if( newPacket != NULL ) {
+							newPacket->fd = cd->fd;
+							packetQueue->push( newPacket );
+						}
 
 						memmove( cd->buffer, cd->buffer + bufferUsed, MAX_PACKET_SIZE - cd->bufferSize );
 
