@@ -18,6 +18,8 @@ class Packet {
 			type = t;
 		}
 
+		virtual ~Packet() {}
+
 		int fd;
 		PacketType type;
 		
