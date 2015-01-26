@@ -4,6 +4,7 @@
 #include "AsyncInterface.h"
 #include "PacketQueue.h"
 #include "BufferQueue.h"
+#include <thread>
 #include <mutex>
 #include <string>
 #include <set>
@@ -15,6 +16,7 @@
 using std::string;
 using std::mutex;
 using std::set;
+using std::thread;
 
 struct ConnectionData {
     unsigned int  fd;
@@ -51,5 +53,8 @@ class AsyncTransport {
 		int fd;
 		bool isServer;
 		volatile bool isRunning;
+		
+		thread sendThread;
+		thread recvThread;
 };
 #endif

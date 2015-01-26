@@ -2,7 +2,6 @@
 #include "AsyncTransport.h"
 #include <errno.h>
 #include <string.h>
-#include <thread>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -14,7 +13,8 @@
 #include <unistd.h>
 #include <iostream>
 
-using std::thread;
+#define EPOLL_TIMEOUT_MS 1000
+
 using std::cerr;
 using std::endl;
 
@@ -148,10 +148,11 @@ AsyncTransport::init( int port ) {
 void
 AsyncTransport::start() {
 	isRunning = true;
-	thread r( receiveData, std::ref(*this) );
-	thread s( sendData,    std::ref(*this) );
-	r.detach();
-	s.detach();
+	recvThread = thread( receiveData, std::ref(*this) );
+	sendThread = thread( sendData,    std::ref(*this) );
+
+	recvThread.detach();
+	sendThread.detach();
 }
 
 void
@@ -163,6 +164,10 @@ AsyncTransport::stop() {
 	}
 
 	pendingData.clear();
+	
+	//Need to push a NULL packet to have getPacket return
+	//TODO think about this
+	packetQueue.push(NULL);
 }
 
 void
@@ -195,7 +200,7 @@ AsyncTransport::receiveData( AsyncTransport &serverTransport ) {
 
 	//TODO only check flag once in a while, not all the time.
 	while( serverTransport.isRunning ) {
-		nfds = epoll_wait( epollFD, events, MAX_EVENTS, -1 );
+		nfds = epoll_wait( epollFD, events, MAX_EVENTS, EPOLL_TIMEOUT_MS );
 		if( nfds == -1 ) {
 			exit(-3);
 		}
@@ -295,6 +300,7 @@ AsyncTransport::receiveData( AsyncTransport &serverTransport ) {
 			}
 		}
 	}
+	std::cout << "existing recvData" << std::endl; std::cout.flush();
 }
 
 void
@@ -312,7 +318,7 @@ AsyncTransport::sendData( AsyncTransport &serverTransport ) {
 	
 	//TODO only check flag once in a while, not all the time.
 	while( serverTransport.isRunning ) {
-		nfds = epoll_wait( epollSendFD, events, MAX_EVENTS, -1 );
+		nfds = epoll_wait( epollSendFD, events, MAX_EVENTS, EPOLL_TIMEOUT_MS );
 		if( nfds == -1 ) {
 			exit(-20);
 		}
@@ -338,4 +344,5 @@ AsyncTransport::sendData( AsyncTransport &serverTransport ) {
 			}
 		}
 	}
+	std::cout << "existing sendData" << std::endl; std::cout.flush();
 }
