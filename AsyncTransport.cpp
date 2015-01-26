@@ -300,7 +300,6 @@ AsyncTransport::receiveData( AsyncTransport &serverTransport ) {
 			}
 		}
 	}
-	std::cout << "existing recvData" << std::endl; std::cout.flush();
 }
 
 void
@@ -344,5 +343,4 @@ AsyncTransport::sendData( AsyncTransport &serverTransport ) {
 			}
 		}
 	}
-	std::cout << "existing sendData" << std::endl; std::cout.flush();
 }
