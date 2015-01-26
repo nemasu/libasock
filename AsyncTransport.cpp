@@ -1,7 +1,5 @@
 #include "AsyncInterface.h"
 #include "AsyncTransport.h"
-#include "BufferQueue.h"
-#include "PacketQueue.h"
 #include <errno.h>
 #include <string.h>
 #include <thread>
@@ -20,24 +18,30 @@ using std::thread;
 using std::cerr;
 using std::endl;
 
-AsyncTransport::AsyncTransport( PacketParser * pp ) {
+AsyncTransport::AsyncTransport( PacketParser &pp ) 
+	: packetParser(pp) {
 	epollSendFD  = epoll_create( 1 );
-	bufferQueue  = new BufferQueue(epollSendFD);
-	packetQueue  = new PacketQueue();
-	packetParser = pp;
+	bufferQueue.setEpollFd(epollSendFD);
+}
+
+AsyncTransport::~AsyncTransport() {
+	if( isRunning ) {
+		stop();
+	}
+	close(epollSendFD);
 }
 
 void
 AsyncTransport::closeFd( int fd ) {
 	lock_guard<mutex> lock( closeMutex );
 	close( fd );
-	bufferQueue->closeFd(fd);
+	bufferQueue.closeFd(fd);
 }
 
 Packet*
 AsyncTransport::getPacket() {
-	packetQueue->wait();
-	return packetQueue->pop();
+	packetQueue.wait();
+	return packetQueue.pop();
 }
 
 void
@@ -49,7 +53,7 @@ AsyncTransport::sendPacket( Packet * pkt ) {
 	}
 	
 	unsigned int length = 0;
-	char *buffer = packetParser->serialize( pkt, &length );
+	char *buffer = packetParser.serialize( pkt, &length );
 	
 	if( !buffer ) {
 		cerr << "AsyncTransport::sendPacket - serialize failed" << endl;
@@ -67,7 +71,7 @@ AsyncTransport::sendPacket( Packet * pkt ) {
         if( ret == (int) length ) {
             break; //All sent OK
 		} else if( (ret == -1) && (errno == EWOULDBLOCK || errno == EAGAIN ) ) {
-			bufferQueue->put( pkt->fd, buffer+ret, length-ret ); //Would block, do epoll stuff
+			bufferQueue.put( pkt->fd, buffer+ret, length-ret ); //Would block, do epoll stuff
         } else {
             closeFd( pkt->fd );//Failed
 			break;
@@ -143,16 +147,29 @@ AsyncTransport::init( int port ) {
 
 void
 AsyncTransport::start() {
-	thread r( receiveData, this );
-	thread s( sendData,    this );
+	isRunning = true;
+	thread r( receiveData, std::ref(*this) );
+	thread s( sendData,    std::ref(*this) );
 	r.detach();
 	s.detach();
 }
 
 void
-AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
-	PacketParser *packetParser = serverTransport->packetParser;
-	PacketQueue  *packetQueue  = serverTransport->packetQueue;
+AsyncTransport::stop() {
+	isRunning = false;
+
+	for ( auto cd : pendingData ) {
+		delete cd;
+	}
+
+	pendingData.clear();
+}
+
+void
+AsyncTransport::receiveData( AsyncTransport &serverTransport ) {
+	PacketParser &packetParser = serverTransport.packetParser;
+	PacketQueue  &packetQueue  = serverTransport.packetQueue;
+	set<ConnectionData*> &pendingData = serverTransport.pendingData;
 
 	static const unsigned int MAX_EVENTS = 1000;
 	epoll_event ev = { 0 }; 
@@ -165,10 +182,10 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 		exit(-1);
 	}
 
-	bool isServer = serverTransport->isServer;
+	bool isServer = serverTransport.isServer;
 	int serverFD = 0;
 	if ( isServer ) {
-		serverFD = serverTransport->fd;
+		serverFD = serverTransport.fd;
 		ev.events = EPOLLIN;
 		ev.data.fd = serverFD;
 		if( epoll_ctl(epollFD, EPOLL_CTL_ADD, serverFD, &ev ) == -1 ) {
@@ -176,7 +193,8 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 		}
 	}
 
-	while( 1 ) {
+	//TODO only check flag once in a while, not all the time.
+	while( serverTransport.isRunning ) {
 		nfds = epoll_wait( epollFD, events, MAX_EVENTS, -1 );
 		if( nfds == -1 ) {
 			exit(-3);
@@ -199,6 +217,7 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 
 				ev.events = EPOLLIN | EPOLLET;
 				ConnectionData *cd = new ConnectionData;
+				pendingData.insert(cd);
 				ev.data.ptr = (void *) cd;
 				cd->fd = connFD;
 				cd->bufferSize = 0;
@@ -209,7 +228,7 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 				Packet *packet = new Packet();
 				packet->type = PacketType::CONNECT;
 				packet->fd = connFD;
-				packetQueue->push( packet );
+				packetQueue.push( packet );
 			} else {
 				ConnectionData *cd = (ConnectionData *) events[n].data.ptr;
 				
@@ -225,7 +244,8 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 						 ||   recvCount == -1
 						 ||   cd->bufferSize > MAX_PACKET_SIZE ) {
 						
-						serverTransport->closeFd( cd->fd );
+						serverTransport.closeFd( cd->fd );
+						pendingData.erase(cd);
 						delete cd;
 						break;
 					}
@@ -234,7 +254,7 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 
 					while (1) {
 						unsigned int bufferUsed = 0;
-						Packet *newPacket = packetParser->deserialize( cd->buffer, cd->bufferSize, &bufferUsed );
+						Packet *newPacket = packetParser.deserialize( cd->buffer, cd->bufferSize, &bufferUsed );
 
 						if( newPacket == NULL && bufferUsed == 0 ) {
 							//Deserialize failed, wait for more data.
@@ -260,7 +280,7 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 						//Assign socket file descriptor
 						if( newPacket != NULL ) {
 							newPacket->fd = cd->fd;
-							packetQueue->push( newPacket );
+							packetQueue.push( newPacket );
 						}
 
 						memmove( cd->buffer, cd->buffer + bufferUsed, MAX_PACKET_SIZE - cd->bufferSize );
@@ -278,18 +298,20 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 }
 
 void
-AsyncTransport::sendData( AsyncTransport * serverTransport ) {
+AsyncTransport::sendData( AsyncTransport &serverTransport ) {
 	static const unsigned int MAX_EVENTS = 1000;
 	epoll_event events[MAX_EVENTS];
 	int nfds;
 
-	int epollSendFD = serverTransport->epollSendFD;
-	BufferQueue *bufferQueue = serverTransport->bufferQueue;
+	int epollSendFD = serverTransport.epollSendFD;
+	BufferQueue &bufferQueue = serverTransport.bufferQueue;
 	
 	if( epollSendFD == -1 ) {
 		exit(-10);
 	}
-	while( 1 ) {
+	
+	//TODO only check flag once in a while, not all the time.
+	while( serverTransport.isRunning ) {
 		nfds = epoll_wait( epollSendFD, events, MAX_EVENTS, -1 );
 		if( nfds == -1 ) {
 			exit(-20);
@@ -302,7 +324,7 @@ AsyncTransport::sendData( AsyncTransport * serverTransport ) {
 			char *buffer = 0;
 
 			while(1) {
-				bufferQueue->get( fd, buffer, &length );
+				bufferQueue.get( fd, buffer, &length );
 				if( length == 0 ) {
 					break;
 				}
@@ -310,9 +332,9 @@ AsyncTransport::sendData( AsyncTransport * serverTransport ) {
 				if( (sent == -1) && (errno == EWOULDBLOCK || errno == EAGAIN ) ) {
 					break;
 				} else if( sent == -1 || sent == 0 ) {
-					serverTransport->closeFd(fd);
+					serverTransport.closeFd(fd);
 				}
-				bufferQueue->updateUsed( fd, sent );
+				bufferQueue.updateUsed( fd, sent );
 			}
 		}
 	}

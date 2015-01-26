@@ -2,12 +2,11 @@
 #define __ASYNCSOCKET_H__
 
 #include "AsyncInterface.h"
+#include "PacketQueue.h"
+#include "BufferQueue.h"
 #include <mutex>
 #include <string>
-
-class BufferQueue;
-class PacketQueue;
-
+#include <set>
 
 //TODO This is huge. 65KB+ per connection too much overhead?
 //Or, smaller buffer, then copy into resizing ConnectionData buffer...
@@ -15,6 +14,7 @@ class PacketQueue;
 
 using std::string;
 using std::mutex;
+using std::set;
 
 struct ConnectionData {
     unsigned int  fd;
@@ -24,23 +24,25 @@ struct ConnectionData {
 
 class AsyncTransport {
 	public:
-		AsyncTransport( PacketParser * );
-		~AsyncTransport(){}
+		AsyncTransport( PacketParser & );
+		~AsyncTransport();
 
 		bool init( int port );
 		bool init( string serverHost, int port );
 		void start();
+		void stop();
 	
 		void sendPacket( Packet * pkt );
 		Packet* getPacket();
 
 		void closeFd( int fd );
 	private:
-		PacketParser *packetParser;
-		BufferQueue  *bufferQueue;
-		PacketQueue  *packetQueue;
-		static void receiveData( AsyncTransport * );
-		static void sendData( AsyncTransport * );
+		PacketParser &packetParser;
+		BufferQueue  bufferQueue;
+		PacketQueue  packetQueue;
+		set<ConnectionData*> pendingData;
+		static void receiveData( AsyncTransport & );
+		static void sendData( AsyncTransport & );
 		int epollSendFD;
 		mutex closeMutex;
 
@@ -48,5 +50,6 @@ class AsyncTransport {
 		//and the listen fd on server.
 		int fd;
 		bool isServer;
+		volatile bool isRunning;
 };
 #endif

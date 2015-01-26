@@ -13,8 +13,12 @@ using std::lock_guard;
 
 class BufferQueue {
 	public:
-		BufferQueue(int epfd){
-			epollFD = epfd;
+		BufferQueue(){
+		}
+
+		void
+		setEpollFd( int fd ) {
+			epollFD = fd;
 		}
 
 		~BufferQueue(){}

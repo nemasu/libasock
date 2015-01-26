@@ -26,7 +26,6 @@ clean:
 
 install: all
 	mkdir -p /usr/include/libasock
-	cp -v AsyncInterface.h /usr/include/libasock
-	cp -v AsyncTransport.h /usr/include/libasock
+	cp -v *.h /usr/include/libasock
 	cp -v libasock.so /usr/lib
 
