@@ -155,7 +155,8 @@ AsyncTransport::receiveData( AsyncTransport * serverTransport ) {
 	PacketQueue  *packetQueue  = serverTransport->packetQueue;
 
 	static const unsigned int MAX_EVENTS = 1000;
-	epoll_event ev, events[MAX_EVENTS];
+	epoll_event ev = { 0 }; 
+	epoll_event events[MAX_EVENTS];
 	int nfds, epollFD, connFD, recvCount;
 	
 	epollFD = epoll_create( 1 );
