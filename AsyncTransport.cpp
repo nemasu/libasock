@@ -166,7 +166,6 @@ AsyncTransport::stop() {
 	pendingData.clear();
 	
 	//Need to push a NULL packet to have getPacket return
-	//TODO think about this
 	packetQueue.push(NULL);
 }
 
@@ -198,7 +197,6 @@ AsyncTransport::receiveData( AsyncTransport &serverTransport ) {
 		}
 	}
 
-	//TODO only check flag once in a while, not all the time.
 	while( serverTransport.isRunning ) {
 		nfds = epoll_wait( epollFD, events, MAX_EVENTS, EPOLL_TIMEOUT_MS );
 		if( nfds == -1 ) {
@@ -315,7 +313,6 @@ AsyncTransport::sendData( AsyncTransport &serverTransport ) {
 		exit(-10);
 	}
 	
-	//TODO only check flag once in a while, not all the time.
 	while( serverTransport.isRunning ) {
 		nfds = epoll_wait( epollSendFD, events, MAX_EVENTS, EPOLL_TIMEOUT_MS );
 		if( nfds == -1 ) {
