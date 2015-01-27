@@ -6,7 +6,7 @@ using std::lock_guard;
 void
 Trigger::wait() {
     unique_lock<mutex> lk(waitMutex);
-    if( !sig ) {
+    while( sig == 0 ) {
         condVar.wait( lk );
     }
 	sig--;
@@ -14,7 +14,7 @@ Trigger::wait() {
 
 void
 Trigger::notify() {
-	lock_guard<mutex> lk(waitMutex);
+	unique_lock<mutex> lk(waitMutex);
 	sig++;
 	condVar.notify_one();
 }
