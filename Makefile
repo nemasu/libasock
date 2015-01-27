@@ -1,7 +1,7 @@
 CCOPTS=-std=c++11 -fpic -Wall -Werror
 
 all: CCOPTS += -O2
-all: libasock
+all: libasock strip
 
 debug: CCOPTS += -g
 debug: libasock
@@ -20,6 +20,9 @@ Trigger.o: Trigger.h Trigger.cpp
 
 PacketQueue.o: PacketQueue.h PacketQueue.cpp
 	g++ -c ${CCOPTS} PacketQueue.cpp -o PacketQueue.o
+
+strip: libasock
+	strip --strip-debug libasock.so
 
 clean:
 	rm -rf *.o libasock*
