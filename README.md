@@ -1,8 +1,6 @@
 # libasock
 Asynchronous C++ TCP socket library for Linux. 
 
-This library is not ready for general use yet, I pulled it out of another project of mine, so it's set up a bit weird at the moment.
-
 It uses non-blocking edge triggered sockets with epoll.
 
 There are 2 threads, one for receiving and one for sending.
