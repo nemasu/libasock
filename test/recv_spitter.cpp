@@ -33,8 +33,8 @@ class PacketParserImpl : public PacketParser {
 int
 main( int argv, char **argc ) {
 	
-	PacketParser *packetParser = new PacketParserImpl();
-	AsyncTransport asyncTransport( packetParser );
+	PacketParserImpl packetParser;
+	AsyncTransport asyncTransport( (*(PacketParser *) &packetParser) );
 
 	asyncTransport.init( 80 );
 	asyncTransport.start();
