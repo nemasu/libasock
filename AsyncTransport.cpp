@@ -70,8 +70,10 @@ AsyncTransport::sendPacket( Packet * pkt ) {
         ret = send( pkt->fd, buffer, length , MSG_NOSIGNAL );
         if( ret == (int) length ) {
             break; //All sent OK
-		} else if( (ret == -1) && (errno == EWOULDBLOCK || errno == EAGAIN ) ) {
+		} else if( ret > 0 ) {
 			bufferQueue.put( pkt->fd, buffer+ret, length-ret ); //Would block, do epoll stuff
+		} else if( (ret == -1) && (errno == EWOULDBLOCK || errno == EAGAIN ) ) {
+			bufferQueue.put( pkt->fd, buffer, length ); //Would block, do epoll stuff
         } else {
             closeFd( pkt->fd );//Failed
 			break;
