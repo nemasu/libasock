@@ -66,18 +66,16 @@ AsyncTransport::sendPacket( Packet * pkt ) {
 
 	//Try to send packet right away, if it blocks, do epoll stuff
     int ret = 0;
+	int sent = 0;
     while(1) {
-        ret = send( pkt->fd, buffer, length , MSG_NOSIGNAL );
-        if( ret == (int) length ) {
+        ret = send( pkt->fd, buffer+sent, length-sent, MSG_NOSIGNAL );
+        if( ret == (int) length-sent ) {
             break; //All sent OK
-		} else if( ret > 0 ) {
-			bufferQueue.put( pkt->fd, buffer+ret, length-ret ); //Would block, do epoll stuff
 		} else if( (ret == -1) && (errno == EWOULDBLOCK || errno == EAGAIN ) ) {
-			bufferQueue.put( pkt->fd, buffer, length ); //Would block, do epoll stuff
-        } else {
-            closeFd( pkt->fd );//Failed
+			bufferQueue.put( pkt->fd, buffer+sent, length-sent ); //Would block, do epoll stuff
 			break;
-		}
+        }
+		sent += ret;
    	}
 
 	delete [] buffer;
