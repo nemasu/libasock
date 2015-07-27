@@ -66,7 +66,7 @@ BufferQueue::put( int fd, char *buffer, int length) {
 	ev.events = EPOLLOUT | EPOLLET;
 	ev.data.fd = fd;
 	if( epoll_ctl(epollFD, EPOLL_CTL_ADD, fd, &ev ) == -1 ) {
-		cerr << "BufferQueue::put epoll_ctl ADD failed." << strerror( errno ) << endl;   
+		cerr << "BufferQueue::put epoll_ctl ADD failed: " << strerror( errno ) << endl;   
 	}
 }
 

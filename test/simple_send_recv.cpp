@@ -67,7 +67,8 @@ main( int argv, char **argc ) {
 
 	//Second packet data
 	packet = (PacketImpl*) asyncTransport.getPacket();
-	
+
+	cout << "simple_send_recv: ";
 	if (packet->data1 == 'h' && packet->data2 == 'i') {
 		cout << "PASS" << endl;
 	} else {
