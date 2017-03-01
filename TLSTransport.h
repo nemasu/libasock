@@ -7,17 +7,13 @@
 
 class TLSTransport : public AsyncTransport {
     public:
-        TLSTransport( PacketParser &packetParser, string certificateFile, string privateKeyFile ) 
-            : AsyncTransport( packetParser ), certificateFile( certificateFile ), privateKeyFile( privateKeyFile ) {
-        }
+        TLSTransport( PacketParser &packetParser, string certificateFile, string privateKeyFile );
+        ~TLSTransport();
 
-        ~TLSTransport() {
-        }
-
-        bool init( string serverHost, int port) override;
-        bool onAfterAccept( int fd ) override;
+        bool init( int port ) override;
         int handleReceive( ConnectionData &cd ) override;
         int handleSend( int fd, char *buffer, int length, int flags ) override;
+        bool onAfterAccept( int fd ) override;
     private:
         SSL_CTX *ctx;
         std::map< int, SSL* > fdToSSL;

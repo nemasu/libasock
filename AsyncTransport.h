@@ -27,10 +27,10 @@ struct ConnectionData {
 class AsyncTransport {
 	public:
 		AsyncTransport( PacketParser & );
-		~AsyncTransport();
+		virtual ~AsyncTransport();
 
-		bool init( int port );
-		virtual bool init( string serverHost, int port );
+		virtual bool init( int port );
+		bool init( string serverHost, int port );
 		void start();
 		void stop();
 	
@@ -48,9 +48,9 @@ class AsyncTransport {
 		int epollSendFD;
 		mutex closeMutex;
 
-		virtual int handleReceive(ConnectionData &cd );
+		virtual int handleReceive( ConnectionData &cd );
 		virtual int handleSend( int fd, char *buffer, int length, int flags );
-        virtual bool onAfterAccept( int fd ) { return true; }
+        virtual bool onAfterAccept( int fd );
 
 		//fd is the server endpoint on client,
 		//and the listen fd on server.

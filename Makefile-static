@@ -6,8 +6,11 @@ all: libasock strip
 debug: CCOPTS += -g
 debug: libasock
 
-libasock: BufferQueue.o AsyncTransport.o Trigger.o PacketQueue.o
-	ar rcs libasock.a BufferQueue.o AsyncTransport.o Trigger.o PacketQueue.o
+libasock: BufferQueue.o AsyncTransport.o Trigger.o PacketQueue.o TLSTransport.o
+	ar rcs libasock.a BufferQueue.o AsyncTransport.o Trigger.o PacketQueue.o TLSTransport.o
+
+TLSTransport.o: TLSTransport.cpp TLSTransport.h
+	g++ -c ${CCOPTS} TLSTransport.cpp -o TLSTransport.o
 
 BufferQueue.o: BufferQueue.cpp BufferQueue.h
 	g++ -c ${CCOPTS} BufferQueue.cpp -o BufferQueue.o

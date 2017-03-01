@@ -1,4 +1,4 @@
-CCOPTS=-std=c++11 -fpic -Wall -Werror
+CCOPTS=-std=c++11 -fpic -Wall -Werror -lssl
 
 all: CCOPTS += -O2
 all: libasock strip
@@ -6,8 +6,11 @@ all: libasock strip
 debug: CCOPTS += -g
 debug: libasock
 
-libasock: BufferQueue.o AsyncTransport.o Trigger.o PacketQueue.o
-	g++ ${CCOPTS} -shared -lpthread BufferQueue.o AsyncTransport.o Trigger.o PacketQueue.o -o libasock.so
+libasock: BufferQueue.o AsyncTransport.o Trigger.o PacketQueue.o TLSTransport.o
+	g++ ${CCOPTS} -shared -lpthread BufferQueue.o AsyncTransport.o Trigger.o PacketQueue.o TLSTransport.o -o libasock.so
+
+TLSTransport.o: TLSTransport.cpp TLSTransport.h
+	g++ -c ${CCOPTS} TLSTransport.cpp -o TLSTransport.o
 
 BufferQueue.o: BufferQueue.cpp BufferQueue.h
 	g++ -c ${CCOPTS} BufferQueue.cpp -o BufferQueue.o

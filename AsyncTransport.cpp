@@ -354,3 +354,8 @@ int
 AsyncTransport::handleSend( int fd, char *buffer, int length, int flags ) {
 	return send( fd, buffer, length, flags );
 }
+
+bool
+AsyncTransport::onAfterAccept( int fd ) { 
+	 return true;
+ }
