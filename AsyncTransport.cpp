@@ -206,7 +206,8 @@ AsyncTransport::receiveData( AsyncTransport &serverTransport ) {
 		int one = 1;
 		for( int n = 0; n < nfds; ++n ) {
 			if( isServer && events[n].data.fd == serverFD ) {
-				connFD = accept( serverFD, NULL, NULL );
+                connFD = accept( serverFD, NULL, NULL );
+
 				if( connFD == -1 ) {
 					continue;
 				}
@@ -228,7 +229,11 @@ AsyncTransport::receiveData( AsyncTransport &serverTransport ) {
 					exit(-4);
 				}
 
-				Packet *packet = new Packet();
+                if( !serverTransport.onAfterAccept( connFD ) ) {
+                    exit(-5);
+                }
+				
+                Packet *packet = new Packet();
 				packet->type = PacketType::CONNECT;
 				packet->fd = connFD;
 				packetQueue.push( packet );
@@ -236,9 +241,7 @@ AsyncTransport::receiveData( AsyncTransport &serverTransport ) {
 				ConnectionData *cd = (ConnectionData *) events[n].data.ptr;
 				
 				while(1) {
-					recvCount = recv( cd->fd,
-							cd->buffer + cd->bufferSize,
-							MAX_PACKET_SIZE - cd->bufferSize, MSG_NOSIGNAL );
+					recvCount = serverTransport.handleReceive( *cd );
 				
 					if      ( (recvCount == -1 && (errno == EAGAIN || errno == EWOULDBLOCK )) ) {
 						break;
@@ -330,7 +333,7 @@ AsyncTransport::sendData( AsyncTransport &serverTransport ) {
 				if( length == 0 ) {
 					break;
 				}
-				sent = send( fd, buffer, length, 0 );
+				sent = serverTransport.handleSend(fd, buffer, length, 0);
 				if( (sent == -1) && (errno == EWOULDBLOCK || errno == EAGAIN ) ) {
 					break;
 				} else if( sent == -1 || sent == 0 ) {
@@ -340,4 +343,14 @@ AsyncTransport::sendData( AsyncTransport &serverTransport ) {
 			}
 		}
 	}
+}
+
+int
+AsyncTransport::handleReceive( ConnectionData &cd ) {
+	return recv( cd.fd, cd.buffer + cd.bufferSize, MAX_PACKET_SIZE - cd.bufferSize, MSG_NOSIGNAL );
+}
+
+int
+AsyncTransport::handleSend( int fd, char *buffer, int length, int flags ) {
+	return send( fd, buffer, length, flags );
 }

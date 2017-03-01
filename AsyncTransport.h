@@ -30,7 +30,7 @@ class AsyncTransport {
 		~AsyncTransport();
 
 		bool init( int port );
-		bool init( string serverHost, int port );
+		virtual bool init( string serverHost, int port );
 		void start();
 		void stop();
 	
@@ -47,6 +47,10 @@ class AsyncTransport {
 		static void sendData( AsyncTransport & );
 		int epollSendFD;
 		mutex closeMutex;
+
+		virtual int handleReceive(ConnectionData &cd );
+		virtual int handleSend( int fd, char *buffer, int length, int flags );
+        virtual bool onAfterAccept( int fd ) { return true; }
 
 		//fd is the server endpoint on client,
 		//and the listen fd on server.
