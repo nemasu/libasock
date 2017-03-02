@@ -9,14 +9,14 @@ Trigger::wait() {
     while( sig == 0 ) {
         condVar.wait( lk );
     }
-	sig--;
+    sig--;
 }
 
 void
 Trigger::notify() {
-	unique_lock<mutex> lk(waitMutex);
-	sig++;
-	condVar.notify_one();
+    unique_lock<mutex> lk(waitMutex);
+    sig++;
+    condVar.notify_one();
 }
-	
+    
 
