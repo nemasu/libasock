@@ -21,7 +21,7 @@ class TLSTransport : public AsyncTransport {
         string certificateFile;
         string privateKeyFile;
 
-		void cleanupSSL( SSL* ssl );
+        void cleanupSSL( SSL* ssl );
 };
 
 #endif
