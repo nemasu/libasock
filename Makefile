@@ -1,4 +1,4 @@
-CCOPTS=-std=c++11 -fpic -Wall -Werror -lssl
+CCOPTS=-std=c++11 -fpic -Wall -Werror -lssl ${CXXFLAGS}
 
 all: CCOPTS += -O2
 all: libasock strip

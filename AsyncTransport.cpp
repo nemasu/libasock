@@ -68,7 +68,7 @@ AsyncTransport::sendPacket( Packet * pkt ) {
     int ret = 0;
 	int sent = 0;
     while(1) {
-        ret = send( pkt->fd, buffer+sent, length-sent, MSG_NOSIGNAL );
+        ret = handleSend( pkt->fd, buffer+sent, length-sent, MSG_NOSIGNAL );
         if( ret == (int) length-sent ) {
             break; //All sent OK
 		} else if( (ret == -1) && (errno == EWOULDBLOCK || errno == EAGAIN ) ) {

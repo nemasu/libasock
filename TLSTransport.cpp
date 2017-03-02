@@ -1,5 +1,9 @@
 #include "TLSTransport.h"
 
+#ifndef DEBUG
+#define DEBUG 0
+#endif
+
 void
 ShowSSLErrors() {
 	ERR_print_errors_fp(stderr);
@@ -11,6 +15,8 @@ TLSTransport::TLSTransport( PacketParser &packetParser, string certificateFile, 
 }
 
 TLSTransport::~TLSTransport() {
+	SSL_CTX_free(ctx);
+	EVP_cleanup();
 }
 
 bool
@@ -80,17 +86,24 @@ TLSTransport::handleReceive( ConnectionData &cd ) {
 		//std::cerr << "handleReceive > 0 " << ret << std::endl;
         return ret;
     } else if ( ret == 0 ) {
-		ShowSSLErrors();
-		std::cerr << "handleReceive == 0 " << ret << std::endl;
+		//ShowSSLErrors();
+		//std::cerr << "handleReceive == 0 " << ret << std::endl;
         //TODO potential shutdown, just close it for now
+		cleanupSSL(ssl);
         return 0;
     } else {
-		//ShowSSLErrors();
-		//std::cerr << "handleReceive else " << ret << ", err: " << SSL_get_error( ssl, ret ) << std::endl;
-		//TODO assuming this is a SSL_ERROR_WANT_READ or a SSL_ERROR_WANT_WRITE
-        //TODO will this read/write get triggered again with ET epoll??
-        errno = EAGAIN;
-        return -1;
+		int err = SSL_get_error( ssl, ret );
+		if( err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE ) {
+			errno = EAGAIN;
+			return -1;
+		}
+		if(DEBUG) {
+			ShowSSLErrors();
+			std::cerr << "libasock: TLSTransort::handleReceive else " << ret << ", err: " << err << std::endl;
+		}
+		//Close on err
+		cleanupSSL(ssl);
+		return 0;
     }
 }
 
@@ -104,16 +117,29 @@ TLSTransport::handleSend( int fd, char *buffer, int length, int flags ) {
 		//std::cerr << "handleSend > 0 " << ret << std::endl;
         return ret;
     } else if ( ret == 0 ) {
-		ShowSSLErrors();
-		std::cerr << "handleSend == 0 " << ret << std::endl;
+		//ShowSSLErrors();
+		//std::cerr << "handleSend == 0 " << ret << std::endl;
         //TODO potential shutdown, just close it for now
+		cleanupSSL(ssl);
         return 0;
     } else {
-		//ShowSSLErrors();
-		//std::cerr << "handleSend else " << ret << std::endl;
-        //TODO assuming this is a SSL_ERROR_WANT_READ or a SSL_ERROR_WANT_WRITE
-        //TODO will this read/write get triggered again with ET epoll??
-        errno = EAGAIN;
-        return -1;
+
+		int err = SSL_get_error( ssl, ret );
+		if( err == SSL_ERROR_WANT_READ || err == SSL_ERROR_WANT_WRITE ) {
+			errno = EAGAIN;
+			return -1;
+		}
+		if(DEBUG) {
+			ShowSSLErrors();
+			std::cerr << "libasock: TLSTransort::handleSend else " << ret << ", err: " << err << std::endl;
+		}
+		//Close on err
+		cleanupSSL(ssl);
+		return 0;
     }
+}
+
+void
+TLSTransport::cleanupSSL( SSL* ssl ) {
+	SSL_free(ssl);
 }
