@@ -1,4 +1,5 @@
 #include "TLSTransport.h"
+#include <openssl/x509v3.h>
 
 #ifndef DEBUG
 #define DEBUG 0
@@ -9,6 +10,11 @@ ShowSSLErrors() {
     ERR_print_errors_fp(stderr);
 }
 
+TLSTransport::TLSTransport( PacketParser &packetParser )
+    : AsyncTransport( packetParser ) {
+    SSL_load_error_strings();    
+    OpenSSL_add_ssl_algorithms();
+}
 
 TLSTransport::TLSTransport( PacketParser &packetParser, string certificateFile, string privateKeyFile ) 
     : AsyncTransport( packetParser ), certificateFile( certificateFile ), privateKeyFile( privateKeyFile ) {
@@ -50,7 +56,9 @@ TLSTransport::init( int port ) {
 
 bool
 TLSTransport::init( string addr, int port ) {
-   
+  
+    hostname = addr;
+
     const SSL_METHOD *method = SSLv23_client_method();
     ctx = SSL_CTX_new( method );
     if( !ctx ) {
@@ -60,22 +68,55 @@ TLSTransport::init( string addr, int port ) {
     }
 
     /* Set the key and cert */
-    if (SSL_CTX_use_certificate_file(ctx, certificateFile.c_str(), SSL_FILETYPE_PEM) < 0) {
-        ShowSSLErrors();
-        return false;
+    if( !certificateFile.empty() ) {
+        if (SSL_CTX_use_certificate_file(ctx, certificateFile.c_str(), SSL_FILETYPE_PEM) < 0) {
+            ShowSSLErrors();
+            return false;
+        }
     }
 
-    if (SSL_CTX_use_PrivateKey_file(ctx, privateKeyFile.c_str(), SSL_FILETYPE_PEM) < 0 ) {
-        ShowSSLErrors();
-        return false;
+    if( !privateKeyFile.empty() ) {
+        if (SSL_CTX_use_PrivateKey_file(ctx, privateKeyFile.c_str(), SSL_FILETYPE_PEM) < 0 ) {
+            ShowSSLErrors();
+            return false;
+        }
     }
 
-    return AsyncTransport::init( addr, port );
+
+    return AsyncTransport::init( hostname, port );
 }
 
 bool
 TLSTransport::onAfterConnect( int fd ) {
-    SSL *ssl = SSL_new( ctx );
+    
+	SSL *ssl = SSL_new( ctx );
+
+	//Verify
+    X509* cert = SSL_get_peer_certificate(ssl);
+	if(cert) {
+		X509_free(cert);
+	} else if(NULL == cert) {
+        ShowSSLErrors();
+        std::cerr << "SSL get_peer_certifiacte failed." << std::endl;
+        return false;
+
+    }
+
+    long res = SSL_get_verify_result(ssl);
+    if( !(X509_V_OK == res) ) {
+        ShowSSLErrors();
+        std::cerr << "SSL get_verify_result failed." << std::endl;
+        return false;
+
+    }
+
+    // Enable automatic hostname checks
+    X509_VERIFY_PARAM *param = NULL;
+    param = SSL_get0_param(ssl);
+    X509_VERIFY_PARAM_set_hostflags(param, X509_CHECK_FLAG_NO_PARTIAL_WILDCARDS);
+    X509_VERIFY_PARAM_set1_host(param, hostname.c_str(), 0);
+    SSL_set_verify(ssl, SSL_VERIFY_PEER, 0);
+
     if( NULL == ssl ) {
         ShowSSLErrors();
         std::cerr << "SSL new failed." << std::endl;
