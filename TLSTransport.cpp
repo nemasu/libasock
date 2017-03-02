@@ -12,6 +12,8 @@ ShowSSLErrors() {
 
 TLSTransport::TLSTransport( PacketParser &packetParser, string certificateFile, string privateKeyFile ) 
     : AsyncTransport( packetParser ), certificateFile( certificateFile ), privateKeyFile( privateKeyFile ) {
+    SSL_load_error_strings();    
+    OpenSSL_add_ssl_algorithms();
 }
 
 TLSTransport::~TLSTransport() {
@@ -21,9 +23,6 @@ TLSTransport::~TLSTransport() {
 
 bool
 TLSTransport::init( int port ) {
-
-    SSL_load_error_strings();    
-    OpenSSL_add_ssl_algorithms();
 
     const SSL_METHOD *method = SSLv23_server_method();
     ctx = SSL_CTX_new( method );
@@ -50,11 +49,37 @@ TLSTransport::init( int port ) {
 }
 
 bool
-TLSTransport::onAfterAccept( int fd ) {
+TLSTransport::init( string addr, int port ) {
+   
+    const SSL_METHOD *method = SSLv23_client_method();
+    ctx = SSL_CTX_new( method );
+    if( !ctx ) {
+        std::cerr << "Unable to create SSL context" << std::endl;
+        ShowSSLErrors();
+        return false;
+    }
+
+    /* Set the key and cert */
+    if (SSL_CTX_use_certificate_file(ctx, certificateFile.c_str(), SSL_FILETYPE_PEM) < 0) {
+        ShowSSLErrors();
+        return false;
+    }
+
+    if (SSL_CTX_use_PrivateKey_file(ctx, privateKeyFile.c_str(), SSL_FILETYPE_PEM) < 0 ) {
+        ShowSSLErrors();
+        return false;
+    }
+
+    return AsyncTransport::init( addr, port );
+}
+
+bool
+TLSTransport::onAfterConnect( int fd ) {
     SSL *ssl = SSL_new( ctx );
     if( NULL == ssl ) {
         ShowSSLErrors();
         std::cerr << "SSL new failed." << std::endl;
+        return false;
     }
     
     fdToSSL[fd] = ssl;
@@ -62,11 +87,45 @@ TLSTransport::onAfterAccept( int fd ) {
     if ( 0 == SSL_set_fd( ssl, fd ) ) {
         ShowSSLErrors();
         std::cerr << "SSL set fd failed." << std::endl;
+        return false;
+    }
+
+    if( SSL_connect(ssl) >= 0 ) {
+        ShowSSLErrors();
+        std::cerr << "SSL connect failed" << std::endl;
+        return false;
+    }
+
+    //TODO this is non-blocking, it may fail, but it might be okay cause it will re-do handshake on read or write anyways.
+    if ( SSL_do_handshake( ssl ) >= 0 ) {
+        ShowSSLErrors();
+        std::cerr << "SSL do handshake failed" << std::endl;
+    }
+    return true;
+
+}
+
+bool
+TLSTransport::onAfterAccept( int fd ) {
+    SSL *ssl = SSL_new( ctx );
+    if( NULL == ssl ) {
+        ShowSSLErrors();
+        std::cerr << "SSL new failed." << std::endl;
+        return false;
+    }
+    
+    fdToSSL[fd] = ssl;
+    
+    if ( 0 == SSL_set_fd( ssl, fd ) ) {
+        ShowSSLErrors();
+        std::cerr << "SSL set fd failed." << std::endl;
+        return false;
     }
 
     if( SSL_accept(ssl) >= 0 ) {
         ShowSSLErrors();
         std::cerr << "SSL accept failed" << std::endl;
+        return false;
     }
 
     //TODO this is non-blocking, it may fail, but it might be okay cause it will re-do handshake on read or write anyways.
@@ -89,7 +148,7 @@ TLSTransport::handleReceive( ConnectionData &cd ) {
         //ShowSSLErrors();
         //std::cerr << "handleReceive == 0 " << ret << std::endl;
         //TODO potential shutdown, just close it for now
-        cleanupSSL(ssl);
+        cleanupSSL(cd.fd);
         return 0;
     } else {
         int err = SSL_get_error( ssl, ret );
@@ -102,7 +161,7 @@ TLSTransport::handleReceive( ConnectionData &cd ) {
             std::cerr << "libasock: TLSTransort::handleReceive else " << ret << ", err: " << err << std::endl;
         }
         //Close on err
-        cleanupSSL(ssl);
+        cleanupSSL(cd.fd);
         return 0;
     }
 }
@@ -120,7 +179,7 @@ TLSTransport::handleSend( int fd, char *buffer, int length, int flags ) {
         //ShowSSLErrors();
         //std::cerr << "handleSend == 0 " << ret << std::endl;
         //TODO potential shutdown, just close it for now
-        cleanupSSL(ssl);
+        cleanupSSL(fd);
         return 0;
     } else {
 
@@ -134,12 +193,13 @@ TLSTransport::handleSend( int fd, char *buffer, int length, int flags ) {
             std::cerr << "libasock: TLSTransort::handleSend else " << ret << ", err: " << err << std::endl;
         }
         //Close on err
-        cleanupSSL(ssl);
+        cleanupSSL(fd);
         return 0;
     }
 }
 
 void
-TLSTransport::cleanupSSL( SSL* ssl ) {
-    SSL_free(ssl);
+TLSTransport::cleanupSSL( int fd ) {
+    SSL_free(fdToSSL[fd]);
+    fdToSSL.erase( fd );
 }

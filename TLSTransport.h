@@ -11,9 +11,11 @@ class TLSTransport : public AsyncTransport {
         ~TLSTransport();
 
         bool init( int port ) override;
+        bool init( string destinationHost, int port ) override;
         int handleReceive( ConnectionData &cd ) override;
         int handleSend( int fd, char *buffer, int length, int flags ) override;
         bool onAfterAccept( int fd ) override;
+        bool onAfterConnect( int fd ) override;
     private:
         SSL_CTX *ctx;
         std::map< int, SSL* > fdToSSL;
@@ -21,7 +23,7 @@ class TLSTransport : public AsyncTransport {
         string certificateFile;
         string privateKeyFile;
 
-        void cleanupSSL( SSL* ssl );
+        void cleanupSSL( int fd );
 };
 
 #endif

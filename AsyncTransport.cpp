@@ -107,6 +107,10 @@ AsyncTransport::init( string addr, int port ) {
     
     int ret = connect(fd, (const sockaddr *) &server, sizeof(server));
 
+    if( !onAfterConnect( fd ) ) {
+        exit(-5);
+    }
+
     return ret == 0 ? true : false;
 }
 
@@ -358,4 +362,9 @@ AsyncTransport::handleSend( int fd, char *buffer, int length, int flags ) {
 bool
 AsyncTransport::onAfterAccept( int fd ) { 
      return true;
- }
+}
+
+bool
+AsyncTransport::onAfterConnect( int fd ) { 
+     return true;
+}
