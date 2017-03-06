@@ -254,9 +254,12 @@ AsyncTransport::receiveData( AsyncTransport &serverTransport ) {
                          ||   recvCount == -1
                          ||   cd->bufferSize > MAX_PACKET_SIZE ) {
                         
-                        serverTransport.closeFd( cd->fd );
-                        pendingData.erase(cd);
-                        delete cd;
+                        //Make sure it hasn't been deleted already
+                        if( pendingData.count(cd) > 0 ) {
+                            serverTransport.closeFd( cd->fd );
+                            pendingData.erase(cd);
+                            delete cd;
+                        }
                         break;
                     }
                     
