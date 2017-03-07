@@ -179,7 +179,20 @@ TLSTransport::onAfterAccept( int fd ) {
 
 int
 TLSTransport::handleReceive( ConnectionData &cd ) {
+    if( fdToSSL.count(cd.fd) == 0 ) {
+        //FD probably closed already
+        if( DEBUG ) {
+            std::cerr<< "TLSTransport::handleReceive - no SSL object for fd: " << cd.fd << std::endl;
+        }
+        return 0;
+    }
+
     SSL *ssl = fdToSSL[cd.fd];
+    
+    if(DEBUG) {
+        std::cerr << "libasock: TLSTransort::handleReceive ssl:  " << ssl << ", fd: " << cd.fd << ", buffer: " << cd.buffer << ", bufferSize: " << cd.bufferSize << std::endl;
+    }
+
     int ret = SSL_read( ssl, cd.buffer + cd.bufferSize, MAX_PACKET_SIZE - cd.bufferSize );
     if( ret > 0 ) {
         //ShowSSLErrors();
@@ -209,7 +222,19 @@ TLSTransport::handleReceive( ConnectionData &cd ) {
 
 int
 TLSTransport::handleSend( int fd, char *buffer, int length, int flags ) {
+    if( fdToSSL.count(fd) == 0 ) {
+        //FD probably closed already
+        if( DEBUG ) {
+            std::cerr<< "TLSTransport::handleSend - no SSL object for fd: " << fd << std::endl;
+        }
+        return 0;
+    }
     SSL *ssl = fdToSSL[fd];
+
+    if(DEBUG) {
+        std::cerr << "libasock: TLSTransort::handleSend ssl:  " << ssl << ", fd: " << fd << ", buffer: " << buffer << ", length: " << length << std::endl;
+    }
+
     int ret = SSL_write( ssl, buffer, length );
 
     if( ret > 0 ) {

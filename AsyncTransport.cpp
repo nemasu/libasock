@@ -345,8 +345,11 @@ AsyncTransport::sendData( AsyncTransport &serverTransport ) {
                     break;
                 } else if( sent == -1 || sent == 0 ) {
                     serverTransport.closeFd(fd);
+                    bufferQueue.closeFd(fd);
+                    break;
+                } else {
+                    bufferQueue.updateUsed( fd, sent );
                 }
-                bufferQueue.updateUsed( fd, sent );
             }
         }
     }
