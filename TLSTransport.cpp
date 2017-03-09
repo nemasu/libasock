@@ -190,7 +190,7 @@ TLSTransport::handleReceive( ConnectionData &cd ) {
     SSL *ssl = fdToSSL[cd.fd];
     
     if(DEBUG) {
-        std::cerr << "libasock: TLSTransort::handleReceive ssl:  " << ssl << ", fd: " << cd.fd << ", buffer: " << cd.buffer << ", bufferSize: " << cd.bufferSize << std::endl;
+        std::cerr << "libasock: TLSTransort::handleReceive ssl:  " << ssl << ", fd: " << cd.fd << ", existing bufferSize: " << cd.bufferSize << std::endl;
     }
 
     int ret = SSL_read( ssl, cd.buffer + cd.bufferSize, MAX_PACKET_SIZE - cd.bufferSize );
@@ -232,7 +232,7 @@ TLSTransport::handleSend( int fd, char *buffer, int length, int flags ) {
     SSL *ssl = fdToSSL[fd];
 
     if(DEBUG) {
-        std::cerr << "libasock: TLSTransort::handleSend ssl:  " << ssl << ", fd: " << fd << ", buffer: " << buffer << ", length: " << length << std::endl;
+        std::cerr << "libasock: TLSTransort::handleSend ssl:  " << ssl << ", fd: " << fd << ", buffer length: " << length << std::endl;
     }
 
     int ret = SSL_write( ssl, buffer, length );
